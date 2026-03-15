@@ -352,14 +352,6 @@ select option{background:white;color:var(--t1)}
   <!-- CREDITS -->
   <div id="s-credits" class="screen">
     <div class="hdr"><div style="font-size:22px;font-weight:800">AI 点数</div><div style="font-size:11px;opacity:.6;margin-top:2px">购买后拍照自动识别食物·计算卡路里</div></div>
-    <div class="redeem-box" style="margin-top:14px">
-      <div class="redeem-title">🎟 输入兑换码</div>
-      <div class="redeem-row">
-        <input class="redeem-input" id="redeem-input" placeholder="如：VH-ABC-2024" maxlength="20">
-        <button class="redeem-btn" onclick="redeemCode()">兑换</button>
-      </div>
-      <div class="redeem-result" id="redeem-result"></div>
-    </div>
     <div id="credits-content"></div>
   </div>
 
@@ -1310,17 +1302,49 @@ function buildInsights(allTotals,avgProt,avgExMins,avgCal,protTarget,tdee,record
 // ===== CREDITS =====
 function renderCredits(){
   document.getElementById('credits-content').innerHTML=
-    '<div class="credit-banner"><div style="font-size:28px">✨</div><div style="flex:1"><div style="font-size:14px;font-weight:700">你的 AI 点数</div><div style="font-size:12px;opacity:.7">每次拍照自动计算卡路里消耗1点</div></div><div style="text-align:right"><div style="font-size:32px;font-weight:800;color:var(--gold)">'+S.credits+'</div><div style="font-size:10px;opacity:.5">剩余点数</div></div></div>'+
+    '<div class="redeem-box">'+
+      '<div class="redeem-title">🎟 输入兑换码</div>'+
+      '<div style="font-size:13px;color:var(--t2);margin-bottom:10px">收到兑换码后输入下方，点数自动到账</div>'+
+      '<div class="redeem-row">'+
+        '<input class="redeem-input" id="redeem-input" placeholder="如：VH-ABC-2024" maxlength="20">'+
+        '<button class="redeem-btn" onclick="redeemCode()">兑 换</button>'+
+      '</div>'+
+      '<div class="redeem-result" id="redeem-result"></div>'+
+    '</div>'+
+    '<div class="credit-banner">'+
+      '<div style="font-size:28px">✨</div>'+
+      '<div style="flex:1"><div style="font-size:14px;font-weight:700">你的 AI 点数</div><div style="font-size:12px;opacity:.7">每次拍照识别食物消耗1点</div></div>'+
+      '<div style="text-align:right"><div style="font-size:32px;font-weight:800;color:var(--gold)">'+S.credits+'</div><div style="font-size:10px;opacity:.5">剩余点数</div></div>'+
+    '</div>'+
     '<div class="sec-ttl">购买点数</div>'+
     '<div style="padding:0 14px;display:flex;flex-direction:column;gap:10px">'+
-    CREDIT_PACKS.map(function(p){return '<div class="credit-pack'+(p.featured?' featured':'')+'" onclick="purchaseCredits(\''+p.id+'\')"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:15px;font-weight:700">'+p.name+(p.featured?' <span style="background:var(--gold);color:white;font-size:11px;padding:2px 7px;border-radius:8px;font-weight:700">热门</span>':'')+'</div><div style="font-size:12px;color:var(--t3);margin-top:3px">'+p.credits+'次AI分析 · '+p.desc+'</div></div><div style="font-size:18px;font-weight:800;color:var(--g)">'+p.price+'</div></div></div>';}).join('')+
+    (function(){
+      var packsHtml='';
+      CREDIT_PACKS.forEach(function(p){
+        packsHtml+='<div class="credit-pack'+(p.featured?' featured':'')+'" data-packid="'+p.id+'">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<div><div style="font-size:15px;font-weight:700">'+p.name+(p.featured?' <span style="background:var(--gold);color:white;font-size:11px;padding:2px 7px;border-radius:8px;font-weight:700">热门</span>':'')+'</div>'+
+          '<div style="font-size:12px;color:var(--t3);margin-top:3px">'+p.credits+'点 · '+p.desc+'</div></div>'+
+          '<div style="font-size:18px;font-weight:800;color:var(--g)">'+p.price+'</div>'+
+          '</div></div>';
+      });
+      return packsHtml;
+    })()+
     '</div>'+
     '<div class="sec-ttl">使用记录</div>'+
     '<div class="card" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center">'+
-    '<div style="background:var(--bg);border-radius:10px;padding:14px"><div style="font-size:28px;font-weight:800;color:var(--g)">'+S.credits+'</div><div style="font-size:12px;color:var(--t3);margin-top:4px">剩余点数</div></div>'+
-    '<div style="background:var(--bg);border-radius:10px;padding:14px"><div style="font-size:28px;font-weight:800;color:var(--t2)">'+(S.totalCreditsUsed||0)+'</div><div style="font-size:12px;color:var(--t3);margin-top:4px">已使用</div></div>'+
+      '<div style="background:var(--bg);border-radius:10px;padding:14px"><div style="font-size:28px;font-weight:800;color:var(--g)">'+S.credits+'</div><div style="font-size:12px;color:var(--t3);margin-top:4px">剩余点数</div></div>'+
+      '<div style="background:var(--bg);border-radius:10px;padding:14px"><div style="font-size:28px;font-weight:800;color:var(--t2)">'+(S.totalCreditsUsed||0)+'</div><div style="font-size:12px;color:var(--t3);margin-top:4px">已使用</div></div>'+
     '</div>';
+  // Attach click handlers to pack cards
+  setTimeout(function(){
+    var packs=document.querySelectorAll('[data-packid]');
+    packs.forEach(function(el){
+      el.onclick=function(){purchaseCredits(el.getAttribute('data-packid'));};
+    });
+  },50);
 }
+
 function purchaseCredits(id){
   var pack=CREDIT_PACKS.find(function(p){return p.id===id;});
   if(!pack)return;
