@@ -36,7 +36,7 @@ body{font-family:-apple-system,'PingFang SC','Hiragino Sans GB',sans-serif;backg
 /* APP */
 #app{display:flex;flex-direction:column;height:100vh;visibility:hidden}
 #app.show{visibility:visible}
-.screen{flex:1;overflow-y:auto;display:none;padding-bottom:calc(var(--nav-h)+var(--sb)+80px)}
+.screen{flex:1;overflow-y:auto;display:none;padding-bottom:calc(var(--nav-h)+var(--sb)+160px)}
 .screen.on{display:block}
 
 /* HEADER */
@@ -297,7 +297,7 @@ select option{background:white;color:var(--t1)}
           <span style="font-size:20px">📷</span> 拍照 / 上传 · 添加饮食
         </button>
       </div>
-      <div style="padding:0 14px 20px">
+      <div style="padding:0 14px 32px">
         <button onclick="switchSubTab('ex')" style="width:100%;background:transparent;color:var(--g);border:1.5px solid rgba(27,67,50,.3);border-radius:14px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
           <span style="font-size:18px">🏃</span> 切换到运动记录
         </button>
@@ -317,7 +317,7 @@ select option{background:white;color:var(--t1)}
           <span style="font-size:20px">🏃</span> 选择运动 · 添加记录
         </button>
       </div>
-      <div style="padding:0 14px 20px">
+      <div style="padding:0 14px 32px">
         <button onclick="switchSubTab('food')" style="width:100%;background:transparent;color:var(--g);border:1.5px solid rgba(27,67,50,.3);border-radius:14px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
           <span style="font-size:18px">🍽</span> 切换到饮食记录
         </button>
@@ -1163,6 +1163,12 @@ function openExModal(){
   if(otherName) otherName.value='';
   switchExTab('manual');
   document.getElementById('ex-modal').classList.add('open');
+}
+function switchExTab(tab){
+  document.getElementById('ex-manual-tab').style.display=tab==='manual'?'block':'none';
+  document.getElementById('ex-fitness-tab').style.display=tab==='fitness'?'block':'none';
+  document.getElementById('ex-tab-m').classList.toggle('on',tab==='manual');
+  document.getElementById('ex-tab-f').classList.toggle('on',tab==='fitness');
 }
 function closeExModal(){document.getElementById('ex-modal').classList.remove('open');}
 
