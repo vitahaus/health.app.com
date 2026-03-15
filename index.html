@@ -19,11 +19,11 @@
   --nav-h:60px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden}
-body{font-family:-apple-system,'PingFang SC','Hiragino Sans GB',sans-serif;background:var(--bg);color:var(--t1);max-width:430px;margin:0 auto;height:100vh;overflow:hidden}
+html,body{height:100%;height:100dvh;overflow:hidden}
+body{font-family:-apple-system,'PingFang SC','Hiragino Sans GB',sans-serif;background:var(--bg);color:var(--t1);max-width:430px;margin:0 auto;height:100vh;height:100dvh;overflow:hidden}
 
 /* ONBOARDING */
-#ob{position:fixed;inset:0;z-index:1000;background:var(--g);overflow-y:auto;padding:calc(var(--st)+60px) 24px calc(40px + var(--sb));color:white}
+#ob{position:fixed;inset:0;z-index:1000;background:var(--g);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(var(--st)+60px) 24px calc(80px + var(--sb));color:white}
 #ob.hide{display:none}
 .ob-logo{font-size:13px;letter-spacing:4px;opacity:.5;margin-bottom:32px}
 .ob-title{font-size:38px;font-weight:800;line-height:1.1;margin-bottom:10px}
@@ -34,9 +34,9 @@ body{font-family:-apple-system,'PingFang SC','Hiragino Sans GB',sans-serif;backg
 .dot.on{background:var(--gold);width:22px}
 
 /* APP */
-#app{display:flex;flex-direction:column;height:100vh;visibility:hidden}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;visibility:hidden}
 #app.show{visibility:visible}
-.screen{flex:1;overflow-y:auto;display:none;padding-bottom:calc(var(--nav-h)+var(--sb)+160px)}
+.screen{flex:1;overflow-y:auto;display:none;padding-bottom:calc(var(--nav-h)+var(--sb)+200px)}
 .screen.on{display:block}
 
 /* HEADER */
@@ -50,7 +50,7 @@ body{font-family:-apple-system,'PingFang SC','Hiragino Sans GB',sans-serif;backg
 .stab.on{background:white;color:var(--g)}
 
 /* NAV */
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:white;border-top:1px solid var(--border);display:flex;height:calc(var(--nav-h)+var(--sb));padding-bottom:var(--sb);z-index:200}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:white;border-top:1px solid var(--border);display:flex;height:calc(var(--nav-h)+var(--sb));padding-bottom:max(var(--sb),env(safe-area-inset-bottom,16px));z-index:200}
 .nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;cursor:pointer;font-family:inherit;color:var(--t3);font-size:10px;padding-top:8px;transition:color .15s}
 .nb.on{color:var(--g)}
 .ni{font-size:20px;line-height:1}
@@ -88,7 +88,7 @@ select option{background:white;color:var(--t1)}
 /* MODAL */
 .modal{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.5);align-items:flex-end;justify-content:center}
 .modal.open{display:flex}
-.mc{background:white;border-radius:20px 20px 0 0;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;padding:0 20px calc(20px + var(--sb));animation:slideUp .25s ease}
+.mc{background:white;border-radius:20px 20px 0 0;width:100%;max-width:430px;max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px calc(40px + var(--sb));animation:slideUp .25s ease}
 .mh{width:36px;height:4px;background:#E0E0E0;border-radius:2px;margin:12px auto 16px}
 .mc h2{font-size:18px;font-weight:700;margin-bottom:4px}
 .mc .meal-badge{display:inline-block;background:var(--g);color:white;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:14px}
@@ -226,16 +226,16 @@ select option{background:white;color:var(--t1)}
   </div>
   <div id="ob2" style="display:none">
     <div class="dots"><div class="dot"></div><div class="dot on"></div><div class="dot"></div></div>
-    <div class="ob-title">运动<span>习惯</span></div>
-    <div class="ob-sub">用于计算每日基础消耗</div>
+    <div class="ob-title">运动/<span>饮食习惯</span></div>
+    <div class="ob-sub">设置活动水平和每日进食时间，用于计算热量消耗</div>
     <div class="ig"><label class="il il-w">日常活动水平</label>
       <select class="inf inf-w" id="o-activity">
         <option value="sedentary">久坐为主</option><option value="light" selected>轻度活跃（每周1-3次）</option>
         <option value="moderate">中度活跃（每周3-5次）</option><option value="active">高度活跃（每周6-7次）</option>
       </select></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="ig"><label class="il il-w">开始进食</label><input class="inf inf-w" id="o-eatstart" type="time" value="11:00"></div>
-      <div class="ig"><label class="il il-w">结束进食</label><input class="inf inf-w" id="o-eatend" type="time" value="18:00"></div>
+      <div class="ig"><label class="il il-w">每日第一餐时间</label><input class="inf inf-w" id="o-eatstart" type="time" value="11:00"></div>
+      <div class="ig"><label class="il il-w">每日结束进食</label><input class="inf inf-w" id="o-eatend" type="time" value="18:00"></div>
     </div>
     <button class="btn btn-gold" onclick="ob3()">下一步 →</button>
     <button class="btn" style="background:rgba(255,255,255,.1);margin-top:8px" onclick="showOb(1)">← 返回</button>
