@@ -374,7 +374,11 @@ select option{background:white;color:var(--t1)}
       </div>
       <button class="btn btn-g" onclick="saveProfile()">保存修改</button>
     </div>
-    <div style="margin:0 14px 24px"><button class="btn" style="background:rgba(230,57,70,.08);color:var(--red);border:none;margin-top:8px" onclick="clearToday()">清空今日数据</button></div>
+    <div class="sec-ttl">数据管理</div>
+    <div style="margin:0 14px;display:flex;flex-direction:column;gap:10px;padding-bottom:40px">
+      <button class="btn" style="background:rgba(230,57,70,.06);color:var(--red);border:1.5px solid rgba(230,57,70,.2)" onclick="clearToday()">🗑 清空今日数据</button>
+      <button class="btn" style="background:rgba(230,57,70,.12);color:var(--red);border:1.5px solid rgba(230,57,70,.3);font-weight:700" onclick="resetAccount()">⚠️ 重置账号（清除所有数据）</button>
+    </div>
   </div>
 
   <nav class="nav">
@@ -534,12 +538,45 @@ const PRAISE_POOL={
 };
 
 let S={profile:null,logs:{},fmd:{active:false,day:1},credits:5,totalCreditsUsed:0};
-let pendingPhoto=null, selectedEx='pilates', selectedExercises={}, reportPeriod='day', currentMealNum=1;
+let pendingPhoto=null, pendingThumb=null, selectedEx='pilates', selectedExercises={}, reportPeriod='day', currentMealNum=1;
 
 // ===== STORAGE =====
 const KEY='vitahaus_v4';
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function load(){try{const d=localStorage.getItem(KEY);if(d)S={...S,...JSON.parse(d)}}catch(e){}}
+function save(){
+  try{
+    // Strip full-res thumbnails before saving - keep only compressed versions
+    var toStore=JSON.parse(JSON.stringify(S));
+    if(toStore.logs){
+      Object.keys(toStore.logs).forEach(function(k){
+        if(toStore.logs[k].meals){
+          toStore.logs[k].meals.forEach(function(m){
+            // Only keep compressed thumb (prefixed with 'data:compressed:')
+            if(m.thumb&&!m.thumb.startsWith('data:compressed:')){
+              m.thumb=null;
+            }
+          });
+        }
+      });
+    }
+    localStorage.setItem(KEY,JSON.stringify(toStore));
+  }catch(e){
+    console.warn('Save failed:',e.message);
+  }
+}
+function load(){
+  try{
+    var d=localStorage.getItem(KEY);
+    if(d){
+      var parsed=JSON.parse(d);
+      // Deep merge to preserve nested defaults
+      S.profile=parsed.profile||null;
+      S.fmd=parsed.fmd||{active:false,day:1};
+      S.credits=parsed.credits!=null?parsed.credits:5;
+      S.totalCreditsUsed=parsed.totalCreditsUsed||0;
+      if(parsed.logs)S.logs=parsed.logs;
+    }
+  }catch(e){console.warn('Load failed:',e);}
+}
 
 // ===== UTILS =====
 function todayKey(){return new Date().toISOString().split('T')[0]}
@@ -737,6 +774,16 @@ function renderLiveAnalysisEx(){
 }
 
 // ===== RENDER TODAY =====
+function getMealThumbHtml(m){
+  var src=m.thumbDisplay||null;
+  if(!src&&m.thumb){
+    var raw=m.thumb;
+    src=raw.startsWith('data:compressed:')?
+        'data:image/jpeg;base64,'+raw.substring(16):raw;
+  }
+  if(src) return '<img src="'+src+'" style="width:100%;height:100%;object-fit:cover">';
+  return '<span style="font-size:22px">'+(m.emoji||'🥗')+'</span>';
+}
 function renderToday(){
   var t=getToday();var totals=dayTotals(todayKey());var tdee=calcTDEE();var p=S.profile;
   var hr=new Date().getHours();
@@ -778,7 +825,7 @@ function renderToday(){
   } else {
     var mealRows=t2.meals.map(function(m,i){
       return '<div class="meal-row">'+
-        '<div class="meal-thumb">'+(m.thumb?'<img src="'+m.thumb+'" style="width:100%;height:100%;object-fit:cover">':(m.emoji||'🥗'))+'</div>'+
+        '<div class="meal-thumb">'+getMealThumbHtml(m)+'</div>'+
         '<div class="meal-body">'+
         '<div style="font-size:11px;color:var(--t3)">'+(MEAL_NAMES[m.mealNum-1]||'餐 '+m.mealNum)+' · '+(m.time||'')+'</div>'+
         '<div style="font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.desc||'饮食记录')+'</div>'+
@@ -842,7 +889,7 @@ function openMealModal(mealNum){
     mealNum=t.meals.length+1;
   }
   currentMealNum=Math.min(mealNum,6);
-  pendingPhoto=null;window._pendingNextTip=null;window._pendingEmoji=null;
+  pendingPhoto=null;pendingThumb=null;window._pendingNextTip=null;window._pendingEmoji=null;
   ['m-desc','m-cal','m-prot','m-med'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('m-time').value=nowTime();
   document.getElementById('meal-modal-title').textContent='添加饮食';
@@ -866,13 +913,36 @@ function openMealModal(mealNum){
 }
 function closeMealModal(){document.getElementById('meal-modal').classList.remove('open')}
 
+function compressImage(dataUrl,maxW,maxH,quality,cb){
+  var img=new Image();
+  img.onload=function(){
+    var w=img.width,h=img.height;
+    if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+    if(h>maxH){w=Math.round(w*maxH/h);h=maxH;}
+    var canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;
+    canvas.getContext('2d').drawImage(img,0,0,w,h);
+    cb(canvas.toDataURL('image/jpeg',quality));
+  };
+  img.src=dataUrl;
+}
+
 function onPhotoSelected(e){
   var file=e.target.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(ev){
-    pendingPhoto=ev.target.result;
-    document.getElementById('photo-drop').innerHTML='<img src="'+pendingPhoto+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px">';
-    showAiActionArea();
+    var original=ev.target.result;
+    // Show original quality in UI
+    document.getElementById('photo-drop').innerHTML='<img src="'+original+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:10px">';
+    // Compress for AI (800px max) and for storage (200px thumbnail)
+    compressImage(original,800,800,0.8,function(compressed){
+      pendingPhoto=compressed;
+      // Also create a tiny thumbnail for saving
+      compressImage(original,200,200,0.6,function(thumb){
+        pendingThumb='data:compressed:'+thumb.split(',')[1];
+      });
+      showAiActionArea();
+    });
   };
   reader.readAsDataURL(file);
 }
@@ -1043,7 +1113,8 @@ function saveMeal(){
     cal:parseInt(document.getElementById('m-cal').value)||0,
     prot:parseInt(document.getElementById('m-prot').value)||0,
     med:parseInt(document.getElementById('m-med').value)||0,
-    thumb:pendingPhoto||null,
+    thumb:pendingThumb||null,
+    thumbDisplay:pendingPhoto||null,
     emoji:window._pendingEmoji||'🥗',
     nextTip:window._pendingNextTip||null
   };
@@ -1326,7 +1397,32 @@ function saveProfile(){
 function toggleFMD(){S.fmd.active=!S.fmd.active;save();renderSettings();}
 function editApiKey(){document.getElementById('api-key-input').value=S.profile.apiKey||'';document.getElementById('api-modal').classList.add('open');}
 function saveApiKey(){S.profile.apiKey=document.getElementById('api-key-input').value.trim();save();closeModal('api-modal');renderSettings();}
-function clearToday(){if(confirm('确定清空今日数据？')){delete S.logs[todayKey()];save();renderToday();goTo('today');alert('✅ 已清空');}}
+function clearToday(){
+  if(confirm('确定清空今日所有饮食和运动记录？')){
+    delete S.logs[todayKey()];
+    save();
+    renderToday();
+    goTo('today');
+    alert('✅ 今日数据已清空');
+  }
+}
+function resetAccount(){
+  if(confirm('⚠️ 确定重置账号？\n\n这将清除所有数据，包括个人资料和历史记录，重新回到注册页面。\n\n此操作不可恢复。')){
+    try{localStorage.removeItem('vitahaus_v4');}catch(e){}
+    S={profile:null,logs:{},fmd:{active:false,day:1},credits:5,totalCreditsUsed:0};
+    document.getElementById('app').classList.remove('show');
+    document.getElementById('ob').classList.remove('hide');
+    // Reset onboarding to step 1
+    [1,2,3].forEach(function(i){document.getElementById('ob'+i).style.display=i===1?'block':'none';});
+    // Clear all input fields
+    ['o-name','o-age','o-weight','o-height'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.value='';
+    });
+    document.getElementById('o-gender').value='';
+    document.getElementById('o-activity').value='light';
+    document.getElementById('o-apikey').value='';
+  }
+}
 
 // ===== INIT =====
 function renderAll(){renderToday();}
