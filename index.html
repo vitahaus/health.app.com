@@ -202,6 +202,14 @@ select option{background:white;color:var(--t1)}
 .bch-val{font-size:11px;font-weight:700;color:white}
 .credit-pack{background:white;border-radius:12px;border:1.5px solid var(--border);padding:14px;cursor:pointer}
 .credit-pack.featured{border-color:var(--gold)}
+.redeem-box{background:rgba(27,67,50,.04);border:1.5px solid rgba(27,67,50,.15);border-radius:14px;padding:18px;margin:0 14px 12px}
+.redeem-title{font-size:14px;font-weight:700;color:var(--g);margin-bottom:10px}
+.redeem-row{display:flex;gap:8px}
+.redeem-input{flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;background:var(--bg);color:var(--t1);text-transform:uppercase;letter-spacing:1px}
+.redeem-input:focus{outline:none;border-color:var(--g)}
+.redeem-btn{background:var(--g);color:white;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+.redeem-btn:active{opacity:.85}
+.redeem-result{margin-top:10px;font-size:13px;text-align:center}
 </style>
 </head>
 <body>
@@ -344,6 +352,14 @@ select option{background:white;color:var(--t1)}
   <!-- CREDITS -->
   <div id="s-credits" class="screen">
     <div class="hdr"><div style="font-size:22px;font-weight:800">AI 点数</div><div style="font-size:11px;opacity:.6;margin-top:2px">购买后拍照自动识别食物·计算卡路里</div></div>
+    <div class="redeem-box" style="margin-top:14px">
+      <div class="redeem-title">🎟 输入兑换码</div>
+      <div class="redeem-row">
+        <input class="redeem-input" id="redeem-input" placeholder="如：VH-ABC-2024" maxlength="20">
+        <button class="redeem-btn" onclick="redeemCode()">兑换</button>
+      </div>
+      <div class="redeem-result" id="redeem-result"></div>
+    </div>
     <div id="credits-content"></div>
   </div>
 
@@ -948,74 +964,21 @@ function onPhotoSelected(e){
 }
 
 function showAiActionArea(){
-  var area=document.getElementById('ai-action-area');area.style.display='block';
+  var area=document.getElementById('ai-action-area');
+  area.style.display='block';
   if(S.profile.apiKey){
-    area.innerHTML='<button class="btn btn-g" onclick="analyzePhoto(\'key\')">🔍 AI 分析 · 自动计算卡路里</button>';
-  } else if(S.credits>0){
-    area.innerHTML='<button class="btn btn-g" onclick="analyzePhoto(\'credits\')">✨ AI 分析（消耗1点数）</button><div style="font-size:12px;color:var(--t3);text-align:center;margin-top:6px">剩余 '+S.credits+' 点</div>';
+    area.innerHTML='<button class="btn btn-g" onclick="analyzePhoto(\'key\')">🔍 AI 识别食物 · 自动计算卡路里</button>'+
+      '<div style="font-size:12px;color:var(--t3);text-align:center;margin-top:6px">使用你的 API Key · 真实 AI 识别</div>';
   } else {
-    area.innerHTML='<div style="background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.3);border-radius:10px;padding:12px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--gold2);margin-bottom:6px">✨ 点数不足</div><button class="btn btn-gold" style="padding:10px" onclick="closeMealModal();goTo(\'credits\')">去购买点数</button></div>';
+    area.innerHTML=
+      '<div style="background:rgba(212,168,67,.08);border:1px solid rgba(212,168,67,.3);border-radius:10px;padding:14px;text-align:center">'+
+      '<div style="font-size:14px;font-weight:700;color:var(--gold2);margin-bottom:6px">⚠️ 未设置 API Key</div>'+
+      '<div style="font-size:12px;color:var(--t2);margin-bottom:10px;line-height:1.5">需要 API Key 才能让 AI 真正识别你的食物照片</div>'+
+      '<div style="display:flex;gap:8px">'+
+      '<button onclick="closeMealModal();goTo(\'set\')" style="flex:1;background:var(--g);color:white;border:none;border-radius:9px;padding:9px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">去设置 Key</button>'+
+      '<button onclick="analyzePhoto(\'credits\')" style="flex:1;background:rgba(27,67,50,.1);color:var(--g);border:none;border-radius:9px;padding:9px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">手动填写</button>'+
+      '</div></div>';
   }
-}
-
-async function analyzePhoto(mode){
-  if(!pendingPhoto)return;
-  document.getElementById('ai-action-area').style.display='none';
-  document.getElementById('ai-loading').style.display='flex';
-  var t=getToday();
-  var prevMeals=t.meals.map(function(m){return m.desc||'';}).filter(Boolean).join('；');
-  var protTarget=calcProtTarget();
-  var currentProt=dayTotals(todayKey()).prot;
-  try{
-    var base64=pendingPhoto.split(',')[1];
-    var mime=pendingPhoto.split(';')[0].split(':')[1];
-    var data;
-    if(mode==='key'&&S.profile.apiKey){
-      var res=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':S.profile.apiKey,'anthropic-version':'2023-06-01'},
-        body:JSON.stringify({model:'claude-opus-4-5',max_tokens:900,
-          system:'你是专业营养师，只返回JSON，不要markdown或其他文字。',
-          messages:[{role:'user',content:[
-            {type:'image',source:{type:'base64',media_type:mime,data:base64}},
-            {type:'text',text:'识别食物，估算营养。今日已摄入：'+(prevMeals||'暂无')+'，已摄入蛋白质'+currentProt+'g，目标'+protTarget+'g。返回JSON：{"foods":[{"name":"名称","amount":"分量","cal":数字,"prot":数字}],"totalCal":数字,"totalProt":数字,"medScore":0-10整数,"medNotes":"15字","nextTip":"下一餐建议20字","emoji":"1个emoji"}'}
-          ]}]})
-      });
-      data=await res.json();
-    } else {
-      await new Promise(function(r){setTimeout(r,1800)});
-      data={content:[{text:'{"foods":[{"name":"三文鱼","amount":"约120g","cal":250,"prot":24},{"name":"混合蔬菜","amount":"约200g","cal":60,"prot":4},{"name":"坚果","amount":"约20g","cal":120,"prot":3}],"totalCal":430,"totalProt":31,"medScore":8,"medNotes":"鱼类+蔬菜+坚果，地中海优质","nextTip":"下一餐加2个鸡蛋补足蛋白质","emoji":"🐟"}'}]};
-    }
-    if(mode==='credits'){S.credits--;S.totalCreditsUsed++;save();}
-    var text=data.content&&data.content[0]?data.content[0].text:'';
-    var match=text.match(/\{[\s\S]*\}/);
-    if(!match)throw new Error('解析失败');
-    var r=JSON.parse(match[0]);
-    document.getElementById('m-desc').value=r.foods.map(function(f){return f.name+f.amount;}).join(' + ');
-    document.getElementById('m-cal').value=r.totalCal||'';
-    document.getElementById('m-prot').value=r.totalProt||'';
-    document.getElementById('m-med').value=r.medScore||'';
-    window._pendingNextTip=r.nextTip||null;
-    window._pendingEmoji=r.emoji||'🥗';
-    var foodRows=r.foods.map(function(f){return '<div class="ai-food-item"><div><div style="font-size:13px;font-weight:500">'+f.name+'</div><div style="font-size:12px;color:var(--t3)">'+f.amount+'</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:600">'+f.cal+'kcal</div><div style="font-size:11px;color:var(--t3)">蛋白'+f.prot+'g</div></div></div>';}).join('');
-    document.getElementById('ai-result-area').innerHTML=
-      '<div class="ai-result">'+
-      '<div style="font-size:12px;font-weight:700;color:var(--g);margin-bottom:8px">🤖 AI识别 · 卡路里已自动计算</div>'+
-      foodRows+
-      '<div class="ai-totals">'+
-      '<div><div style="font-size:18px;font-weight:800;color:var(--g)">'+r.totalCal+'</div><div style="font-size:10px;color:var(--t3)">总卡路里</div></div>'+
-      '<div><div style="font-size:18px;font-weight:800;color:var(--gold2)">'+r.totalProt+'g</div><div style="font-size:10px;color:var(--t3)">蛋白质</div></div>'+
-      '<div><div style="font-size:18px;font-weight:800;color:var(--g3)">'+r.medScore+'/10</div><div style="font-size:10px;color:var(--t3)">地中海分</div></div>'+
-      '</div>'+(r.medNotes?'<div style="font-size:11px;color:var(--t3);margin-top:6px">'+r.medNotes+'</div>':'')+
-      '</div>';
-    if(r.nextTip){
-      document.getElementById('next-meal-suggestion').innerHTML='<div style="background:rgba(27,67,50,.06);border-left:3px solid var(--g);border-radius:0 8px 8px 0;padding:10px 12px;margin:8px 0;font-size:13px;color:var(--t2)">💡 <b>下一餐建议：</b>'+r.nextTip+'</div>';
-    }
-  } catch(err){
-    document.getElementById('ai-result-area').innerHTML='<div class="tip" style="border-left-color:var(--red)">分析失败，请手动填写。'+( err.message||'')+'</div>';
-    document.getElementById('ai-action-area').style.display='block';
-  }
-  document.getElementById('ai-loading').style.display='none';
 }
 
 function onDescInput(){
@@ -1053,7 +1016,7 @@ async function analyzeText(){
       var res=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':S.profile.apiKey,'anthropic-version':'2023-06-01'},
-        body:JSON.stringify({model:'claude-opus-4-5',max_tokens:900,
+        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:900,
           system:'你是专业营养师，只返回JSON，不要markdown或其他文字。',
           messages:[{role:'user',content:[{type:'text',text:'根据以下食物描述估算营养成分。今日已摄入：'+(prevMeals||'暂无')+'，已摄入蛋白质'+currentProt+'g，目标'+protTarget+'g。食物：'+desc+'。返回JSON：{"foods":[{"name":"名称","amount":"估计分量","cal":数字,"prot":数字}],"totalCal":数字,"totalProt":数字,"medScore":0-10整数,"medNotes":"15字","nextTip":"下一餐建议20字","emoji":"1个emoji"}'}]}]})
       });
@@ -1422,6 +1385,35 @@ function resetAccount(){
     document.getElementById('o-activity').value='light';
     document.getElementById('o-apikey').value='';
   }
+}
+
+// ===== REDEEM CODES =====
+var CODE_BANK={"VH-LDONOV": 20, "VH-W4T9U9": 20, "VH-DF6V70": 20, "VH-5EGQ3P": 20, "VH-YEGCH3": 20, "VH-N89YKM": 20, "VH-QAZU1I": 20, "VH-H87EWU": 20, "VH-T0GDCW": 20, "VH-4MSB48": 20, "VH-GAAWGS": 100, "VH-00ATZ9": 100, "VH-AAZN58": 100, "VH-9FENS0": 100, "VH-G51746": 100, "VH-9R9UAR": 100, "VH-LA3TFO": 100, "VH-G4BUBY": 100, "VH-DNQCBP": 100, "VH-BRFVNG": 100, "VH-RJ2JFV": 300, "VH-JQYC5S": 300, "VH-MDK04U": 300, "VH-C6HPLS": 300, "VH-XFL3DZ": 300, "VH-ZEPHEW": 300, "VH-GZYWOC": 300, "VH-4C6Y4I": 300, "VH-KFDIZF": 300, "VH-JBO081": 300};
+var USED_CODES_KEY='vitahaus_used_codes';
+function getUsedCodes(){try{return JSON.parse(localStorage.getItem(USED_CODES_KEY)||'[]')}catch(e){return [];}}
+function markCodeUsed(code){var used=getUsedCodes();used.push(code);try{localStorage.setItem(USED_CODES_KEY,JSON.stringify(used))}catch(e){}}
+
+function redeemCode(){
+  var raw=document.getElementById('redeem-input').value.trim().toUpperCase();
+  var result=document.getElementById('redeem-result');
+  if(!raw){result.innerHTML='<span style="color:var(--red)">请输入兑换码</span>';return;}
+  var pts=CODE_BANK[raw];
+  if(pts===undefined){
+    result.innerHTML='<span style="color:var(--red)">❌ 无效的兑换码，请检查是否输入正确</span>';
+    return;
+  }
+  var used=getUsedCodes();
+  if(used.indexOf(raw)>=0){
+    result.innerHTML='<span style="color:var(--orange)">⚠️ 此兑换码已被使用</span>';
+    return;
+  }
+  // Valid and unused - credit the points
+  markCodeUsed(raw);
+  S.credits+=pts;
+  save();
+  document.getElementById('redeem-input').value='';
+  result.innerHTML='<span style="color:var(--g);font-weight:700">✅ 兑换成功！已到账 '+pts+' 点，当前共 '+S.credits+' 点</span>';
+  renderCredits();
 }
 
 // ===== INIT =====
