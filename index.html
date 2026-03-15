@@ -292,9 +292,14 @@ select option{background:white;color:var(--t1)}
       <div class="sec-ttl">今日饮食记录</div>
       <div class="card" id="meal-list"></div>
 
-      <div style="padding:6px 14px 24px">
+      <div style="padding:6px 14px 4px">
         <button class="add-btn" onclick="openMealModal(null)">
           <span style="font-size:20px">📷</span> 拍照 / 上传 · 添加饮食
+        </button>
+      </div>
+      <div style="padding:0 14px 20px">
+        <button onclick="switchSubTab('ex')" style="width:100%;background:transparent;color:var(--g);border:1.5px solid rgba(27,67,50,.3);border-radius:14px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span style="font-size:18px">🏃</span> 切换到运动记录
         </button>
       </div>
     </div>
@@ -310,6 +315,11 @@ select option{background:white;color:var(--t1)}
       <div style="padding:6px 14px 24px">
         <button class="add-btn alt" onclick="openExModal()">
           <span style="font-size:20px">🏃</span> 选择运动 · 添加记录
+        </button>
+      </div>
+      <div style="padding:0 14px 20px">
+        <button onclick="switchSubTab('food')" style="width:100%;background:transparent;color:var(--g);border:1.5px solid rgba(27,67,50,.3);border-radius:14px;padding:13px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span style="font-size:18px">🍽</span> 切换到饮食记录
         </button>
       </div>
     </div>
@@ -402,7 +412,13 @@ select option{background:white;color:var(--t1)}
     <div id="ai-action-area" style="margin:10px 0;display:none"></div>
     <div id="ai-loading" style="display:none" class="analyzing"><div class="spin"></div>AI 识别食物 · 自动计算卡路里…</div>
     <div id="ai-result-area"></div>
-    <div class="ig" style="margin-top:8px"><label class="il il-d">食物描述</label><input class="inf inf-d" id="m-desc" placeholder="如：三文鱼 + 5种蔬菜 + 坚果"></div>
+    <div class="ig" style="margin-top:8px">
+      <label class="il il-d" style="display:flex;justify-content:space-between;align-items:center">
+        <span>食物描述</span>
+        <button id="text-ai-btn" onclick="analyzeText()" style="display:none;background:rgba(27,67,50,.1);color:var(--g);border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer">✨ AI分析文字</button>
+      </label>
+      <input class="inf inf-d" id="m-desc" placeholder="如：坚果一把 / 三文鱼120g" oninput="onDescInput()">
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
       <div class="ig"><label class="il il-d">卡路里</label><input class="inf inf-d" id="m-cal" type="number" placeholder="AI自动填"></div>
       <div class="ig"><label class="il il-d">蛋白质(g)</label><input class="inf inf-d" id="m-prot" type="number" placeholder="g"></div>
@@ -744,12 +760,15 @@ function renderToday(){
   var ep=(t.eatEnd?toMin(t.eatEnd):t.eatStart?toMin(nowTime()):18*60)/(24*60)*100;
   var fw=t.eatStart?Math.max(3,ep-sp):0;
   document.getElementById('ew-card').innerHTML=
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:15px;font-weight:700">饮食窗口</span><span class="badge '+ws.cls+'">'+ws.label+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:15px;font-weight:700">今日饮食窗口</span><span class="badge '+ws.cls+'">'+ws.label+'</span></div>'+
     '<div class="ew-bar"><div class="ew-fill" style="left:'+sp+'%;width:'+fw+'%">'+(wh?wh.toFixed(1)+'h':'')+'</div></div>'+
     '<div class="ew-labels"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>'+
     '<div class="ew-times">'+
     '<div class="ew-time-btn '+(t.eatStart?'set':'')+'" onclick="setEatTime(\'start\')"><div class="tb-lbl">开始进食</div><div class="tb-val" style="'+(t.eatStart?'':'font-size:14px;font-weight:400;color:var(--t3)')+'">'+( t.eatStart||'点击记录')+'</div></div>'+
     '<div class="ew-time-btn '+(t.eatEnd?'set':'')+'" onclick="setEatTime(\'end\')"><div class="tb-lbl">结束进食</div><div class="tb-val" style="'+(t.eatEnd?'':'font-size:14px;font-weight:400;color:var(--t3)')+'">'+( t.eatEnd||'点击记录')+'</div></div>'+
+    '</div>'+
+    '<div style="margin-top:12px;background:rgba(212,168,67,.08);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:9px 12px;font-size:12px;color:var(--t2);line-height:1.5">'+
+    '🌙 <b>睡前建议：</b>避免睡前3小时进食，有助于消化、睡眠质量和代谢健康'+
     '</div>';
 
   // Meals
@@ -838,6 +857,8 @@ function openMealModal(mealNum){
     '<div style="font-size:12px;color:var(--t3);margin-top:10px">AI 自动识别食物 · 计算卡路里</div>'+
     '</div>';
   document.getElementById('ai-action-area').style.display='none';
+  var textBtn=document.getElementById('text-ai-btn');
+  if(textBtn)textBtn.style.display='none';
   document.getElementById('ai-loading').style.display='none';
   document.getElementById('ai-result-area').innerHTML='';
   document.getElementById('next-meal-suggestion').innerHTML='';
@@ -923,6 +944,97 @@ async function analyzePhoto(mode){
   } catch(err){
     document.getElementById('ai-result-area').innerHTML='<div class="tip" style="border-left-color:var(--red)">分析失败，请手动填写。'+( err.message||'')+'</div>';
     document.getElementById('ai-action-area').style.display='block';
+  }
+  document.getElementById('ai-loading').style.display='none';
+}
+
+function onDescInput(){
+  var desc=document.getElementById('m-desc').value.trim();
+  var btn=document.getElementById('text-ai-btn');
+  if(!btn)return;
+  // Show text AI button only when there's text but no photo, and AI is available
+  if(desc.length>1&&!pendingPhoto&&(S.profile.apiKey||S.credits>0)){
+    btn.style.display='block';
+    if(S.credits>0&&!S.profile.apiKey){
+      btn.textContent='✨ AI分析（消耗1点）';
+    } else {
+      btn.textContent='✨ AI分析文字';
+    }
+  } else {
+    btn.style.display='none';
+  }
+}
+
+async function analyzeText(){
+  var desc=document.getElementById('m-desc').value.trim();
+  if(!desc)return;
+  var mode=S.profile.apiKey?'key':'credits';
+  if(mode==='credits'&&S.credits<=0){alert('点数不足，请购买');return;}
+  document.getElementById('text-ai-btn').style.display='none';
+  document.getElementById('ai-loading').style.display='flex';
+  document.getElementById('ai-result-area').innerHTML='';
+  var t=getToday();
+  var prevMeals=t.meals.map(function(m){return m.desc||'';}).filter(Boolean).join('；');
+  var protTarget=calcProtTarget();
+  var currentProt=dayTotals(todayKey()).prot;
+  try{
+    var data;
+    if(mode==='key'&&S.profile.apiKey){
+      var res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':S.profile.apiKey,'anthropic-version':'2023-06-01'},
+        body:JSON.stringify({model:'claude-opus-4-5',max_tokens:900,
+          system:'你是专业营养师，只返回JSON，不要markdown或其他文字。',
+          messages:[{role:'user',content:[{type:'text',text:'根据以下食物描述估算营养成分。今日已摄入：'+(prevMeals||'暂无')+'，已摄入蛋白质'+currentProt+'g，目标'+protTarget+'g。
+
+食物：'+desc+'
+
+返回JSON：{"foods":[{"name":"名称","amount":"估计分量","cal":数字,"prot":数字}],"totalCal":数字,"totalProt":数字,"medScore":0-10整数,"medNotes":"15字","nextTip":"下一餐建议20字","emoji":"1个emoji"}'}]}]})
+      });
+      data=await res.json();
+    } else {
+      // Demo mode
+      await new Promise(function(r){setTimeout(r,1200)});
+      // Smart demo based on keywords
+      var cal=150,prot=4,med=5,emoji='🥜',notes='坚果富含健康脂肪';
+      var dl=desc.toLowerCase();
+      if(dl.indexOf('坚果')>=0||dl.indexOf('nuts')>=0){cal=180;prot=5;med=7;emoji='🥜';notes='坚果富含健康脂肪和蛋白质';}
+      else if(dl.indexOf('三文鱼')>=0||dl.indexOf('salmon')>=0){cal=250;prot=24;med=9;emoji='🐟';notes='优质蛋白，地中海首选';}
+      else if(dl.indexOf('鸡蛋')>=0||dl.indexOf('egg')>=0){cal=140;prot=12;med=6;emoji='🥚';notes='优质完全蛋白';}
+      else if(dl.indexOf('酸奶')>=0||dl.indexOf('yogurt')>=0){cal=100;prot=10;med=6;emoji='🥛';notes='希腊酸奶蛋白质更高';}
+      else if(dl.indexOf('蔬菜')>=0||dl.indexOf('vegetables')>=0){cal=50;prot=3;med=8;emoji='🥗';notes='高纤维低热量';}
+      data={content:[{text:'{"foods":[{"name":"'+desc+'","amount":"一份","cal":'+cal+',"prot":'+prot+'}],"totalCal":'+cal+',"totalProt":'+prot+',"medScore":'+med+',"medNotes":"'+notes+'","nextTip":"继续保持均衡饮食","emoji":"'+emoji+'"}'}]};
+    }
+    if(mode==='credits'){S.credits--;S.totalCreditsUsed++;save();}
+    var text=data.content&&data.content[0]?data.content[0].text:'';
+    var match=text.match(/\{[\s\S]*\}/);
+    if(!match)throw new Error('解析失败');
+    var r=JSON.parse(match[0]);
+    document.getElementById('m-cal').value=r.totalCal||'';
+    document.getElementById('m-prot').value=r.totalProt||'';
+    document.getElementById('m-med').value=r.medScore||'';
+    if(r.foods&&r.foods[0]&&!document.getElementById('m-desc').value){
+      document.getElementById('m-desc').value=r.foods.map(function(f){return f.name+' '+f.amount;}).join(' + ');
+    }
+    window._pendingNextTip=r.nextTip||null;
+    window._pendingEmoji=r.emoji||'🥗';
+    var foodRows=r.foods.map(function(f){return '<div class="ai-food-item"><div><div style="font-size:13px;font-weight:500">'+f.name+'</div><div style="font-size:12px;color:var(--t3)">'+f.amount+'</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:600">'+f.cal+'kcal</div><div style="font-size:11px;color:var(--t3)">蛋白'+f.prot+'g</div></div></div>';}).join('');
+    document.getElementById('ai-result-area').innerHTML=
+      '<div class="ai-result">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--g);margin-bottom:8px">🤖 AI文字分析 · 营养已自动估算</div>'+
+      foodRows+
+      '<div class="ai-totals">'+
+      '<div><div style="font-size:18px;font-weight:800;color:var(--g)">'+r.totalCal+'</div><div style="font-size:10px;color:var(--t3)">总卡路里</div></div>'+
+      '<div><div style="font-size:18px;font-weight:800;color:var(--gold2)">'+r.totalProt+'g</div><div style="font-size:10px;color:var(--t3)">蛋白质</div></div>'+
+      '<div><div style="font-size:18px;font-weight:800;color:var(--g3)">'+r.medScore+'/10</div><div style="font-size:10px;color:var(--t3)">地中海分</div></div>'+
+      '</div>'+(r.medNotes?'<div style="font-size:11px;color:var(--t3);margin-top:6px">'+r.medNotes+'</div>':'')+
+      '</div>';
+    if(r.nextTip){
+      document.getElementById('next-meal-suggestion').innerHTML='<div style="background:rgba(27,67,50,.06);border-left:3px solid var(--g);border-radius:0 8px 8px 0;padding:10px 12px;margin:8px 0;font-size:13px;color:var(--t2)">💡 <b>下一餐建议：</b>'+r.nextTip+'</div>';
+    }
+  } catch(err){
+    document.getElementById('ai-result-area').innerHTML='<div class="tip" style="border-left-color:var(--red)">分析失败，请手动填写。'+( err.message||'')+'</div>';
+    document.getElementById('text-ai-btn').style.display='block';
   }
   document.getElementById('ai-loading').style.display='none';
 }
