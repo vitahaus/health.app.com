@@ -985,11 +985,7 @@ async function analyzeText(){
         headers:{'Content-Type':'application/json','x-api-key':S.profile.apiKey,'anthropic-version':'2023-06-01'},
         body:JSON.stringify({model:'claude-opus-4-5',max_tokens:900,
           system:'你是专业营养师，只返回JSON，不要markdown或其他文字。',
-          messages:[{role:'user',content:[{type:'text',text:'根据以下食物描述估算营养成分。今日已摄入：'+(prevMeals||'暂无')+'，已摄入蛋白质'+currentProt+'g，目标'+protTarget+'g。
-
-食物：'+desc+'
-
-返回JSON：{"foods":[{"name":"名称","amount":"估计分量","cal":数字,"prot":数字}],"totalCal":数字,"totalProt":数字,"medScore":0-10整数,"medNotes":"15字","nextTip":"下一餐建议20字","emoji":"1个emoji"}'}]}]})
+          messages:[{role:'user',content:[{type:'text',text:'根据以下食物描述估算营养成分。今日已摄入：'+(prevMeals||'暂无')+'，已摄入蛋白质'+currentProt+'g，目标'+protTarget+'g。食物：'+desc+'。返回JSON：{"foods":[{"name":"名称","amount":"估计分量","cal":数字,"prot":数字}],"totalCal":数字,"totalProt":数字,"medScore":0-10整数,"medNotes":"15字","nextTip":"下一餐建议20字","emoji":"1个emoji"}'}]}]})
       });
       data=await res.json();
     } else {
